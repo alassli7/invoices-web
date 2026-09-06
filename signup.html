@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إنشاء حساب جديد - فواتيري</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .auth-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            width: 100%;
+            max-width: 900px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        @media (max-width: 768px) {
+            .auth-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .auth-side {
+                display: none !important;
+            }
+        }
+
+        .auth-side {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 60px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .auth-brand {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #fff;
+        }
+
+        .auth-side h1 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .auth-side p {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .auth-features {
+            list-style: none;
+        }
+
+        .auth-feature {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .auth-feature:hover {
+            transform: translateX(5px);
+        }
+
+        .auth-feature-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 15px;
+            font-size: 1.2rem;
+        }
+
+        .auth-form-side {
+            padding: 60px 40px;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .auth-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .auth-header h2 {
+            font-size: 2rem;
+            color: #1a202c;
+            margin-bottom: 10px;
+        }
+
+        .auth-header p {
+            color: #718096;
+            font-size: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-input.error {
+            border-color: #e53e3e;
+        }
+
+        .form-input.success {
+            border-color: #38a169;
+        }
+
+        .password-requirements {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 10px;
+        }
+
+        .password-requirements h4 {
+            font-size: 0.9rem;
+            color: #4a5568;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .requirement-list {
+            list-style: none;
+        }
+
+        .requirement-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: #718096;
+            transition: all 0.3s ease;
+        }
+
+        .requirement-item.met {
+            color: #38a169;
+        }
+
+        .requirement-item:not(.met)::before {
+            content: "○";
+            margin-left: 8px;
+            color: #cbd5e0;
+        }
+
+        .requirement-item.met::before {
+            content: "✓";
+            margin-left: 8px;
+            color: #38a169;
+            font-weight: bold;
+        }
+
+        .error-message {
+            color: #e53e3e;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 25px;
+            color: #718096;
+            font-size: 0.95rem;
+        }
+
+        .login-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .login-link a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .success-message {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .success-message.show {
+            display: flex;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .business-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 500px) {
+            .business-fields {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .doc-number-validation {
+            font-size: 0.8rem;
+            margin-top: 5px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .doc-number-validation.valid {
+            display: block;
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .doc-number-validation.invalid {
+            display: block;
+            background: #fed7d7;
+            color: #742a2a;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <!-- الجانب الأيمن - معلومات -->
+        <div class="auth-side">
+            <div class="auth-brand">فواتيري 💼</div>
+            <h1>أنشئ حسابك الجديد وابدأ إدارة نشاطك التجاري</h1>
+            <p>نظام فواتير سعودي متكامل للأعمال الحرة والشركات الصغيرة، مع دعم كامل لضريبة القيمة المضافة والوثائق الرسمية.</p>
+            
+            <ul class="auth-features">
+                <li class="auth-feature">
+                    <div class="auth-feature-icon">📧</div>
+                    <span>تفعيل الحساب عبر البريد الإلكتروني</span>
+                </li>
+                <li class="auth-feature">
+                    <div class="auth-feature-icon">🔒</div>
+                    <span>كلمة مرور قوية وآمنة</span>
+                </li>
+                <li class="auth-feature">
+                    <div class="auth-feature-icon">📄</div>
+                    <span>دعم وثيقة العمل الحر والسجل التجاري</span>
+                </li>
+                <li class="auth-feature">
+                    <div class="auth-feature-icon">💳</div>
+                    <span>إصدار فواتير احترافية فوراً</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- الجانب الأيسر - النموذج -->
+        <div class="auth-form-side">
+            <div class="auth-header">
+                <span class="auth-badge">حساب جديد ✨</span>
+                <h2>مرحباً بك!</h2>
+                <p>أكمل البيانات أدناه لإنشاء حسابك الجديد</p>
+            </div>
+
+            <div id="successMessage" class="success-message">
+                <span style="font-size: 1.5rem;">✅</span>
+                <span>تم إرسال رابط التفعيل إلى بريدك الإلكتروني. يرجى التحقق من صندوق الوارد لتفعيل حسابك.</span>
+            </div>
+
+            <form id="signupForm">
+                <!-- بيانات النشاط -->
+                <div class="business-fields">
+                    <div class="form-group">
+                        <label class="form-label" for="businessName">اسم النشاط *</label>
+                        <input 
+                            type="text" 
+                            id="businessName" 
+                            class="form-input" 
+                            placeholder="مثال: تصميمي الحر"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="docType">نوع الوثيقة *</label>
+                        <select id="docType" class="form-input" required>
+                            <option value="">اختر النوع</option>
+                            <option value="freelance">وثيقة العمل الحر</option>
+                            <option value="cr">السجل التجاري</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="docNumber">رقم الوثيقة *</label>
+                    <input 
+                        type="text" 
+                        id="docNumber" 
+                        class="form-input" 
+                        placeholder="FL-XXXXXXXX أو 7XXXXXXXXX"
+                        dir="ltr"
+                        required
+                    >
+                    <div id="docValidation" class="doc-number-validation"></div>
+                </div>
+
+                <!-- بيانات الحساب -->
+                <div class="form-group">
+                    <label class="form-label" for="email">البريد الإلكتروني *</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        class="form-input" 
+                        placeholder="name@example.com"
+                        dir="ltr"
+                        required
+                    >
+                    <div id="emailError" class="error-message"></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="username">اسم المستخدم *</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        class="form-input" 
+                        placeholder="اسم مستخدم فريد"
+                        required
+                    >
+                    <div id="usernameError" class="error-message"></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">كلمة المرور *</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        class="form-input" 
+                        placeholder="••••••••"
+                        dir="ltr"
+                        required
+                        minlength="8"
+                    >
+                    
+                    <div class="password-requirements">
+                        <h4>يجب أن تتكون كلمة المرور من:</h4>
+                        <ul class="requirement-list">
+                            <li class="requirement-item" id="req-length">8 خانات على الأقل</li>
+                            <li class="requirement-item" id="req-lower">حرف صغير واحد (a-z)</li>
+                            <li class="requirement-item" id="req-upper">حرف كبير واحد (A-Z)</li>
+                            <li class="requirement-item" id="req-number">رقم واحد على الأقل (0-9)</li>
+                            <li class="requirement-item" id="req-symbol">رمز واحد على الأقل (!@#$%^&*)</li>
+                        </ul>
+                    </div>
+                    <div id="passwordError" class="error-message"></div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    إنشاء الحساب
+                </button>
+            </form>
+
+            <div class="login-link">
+                لديك حساب بالفعل؟ <a href="#" onclick="window.location.href='index.html'">تسجيل الدخول</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // إعدادات Supabase
+        const SUPABASE_URL = 'https://ohwreqztjzkpgoihkvgb.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_sjcUOeAVGeGMr4Urtz6NtQ_aWMA7_e7';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // عناصر النموذج
+        const form = document.getElementById('signupForm');
+        const passwordInput = document.getElementById('password');
+        const emailInput = document.getElementById('email');
+        const usernameInput = document.getElementById('username');
+        const docNumberInput = document.getElementById('docNumber');
+        const docTypeSelect = document.getElementById('docType');
+        const submitBtn = document.getElementById('submitBtn');
+        const successMessage = document.getElementById('successMessage');
+
+        // متطلبات كلمة المرور
+        const requirements = {
+            length: { regex: /^.{8,}$/, element: document.getElementById('req-length') },
+            lower: { regex: /[a-z]/, element: document.getElementById('req-lower') },
+            upper: { regex: /[A-Z]/, element: document.getElementById('req-upper') },
+            number: { regex: /[0-9]/, element: document.getElementById('req-number') },
+            symbol: { regex: /[!@#$%^&*(),.?":{}|<>_\-=+[\]\\;'\/`~]/, element: document.getElementById('req-symbol') }
+        };
+
+        // التحقق من كلمة المرور
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            let allMet = true;
+
+            for (const [key, req] of Object.entries(requirements)) {
+                const met = req.regex.test(password);
+                req.element.classList.toggle('met', met);
+                if (!met) allMet = false;
+            }
+
+            this.classList.toggle('error', !allMet && password.length > 0);
+            this.classList.toggle('success', allMet);
+        });
+
+        // التحقق من رقم الوثيقة
+        docNumberInput.addEventListener('input', function() {
+            const docType = docTypeSelect.value;
+            const docNumber = this.value.trim();
+            const validationDiv = document.getElementById('docValidation');
+            
+            if (!docNumber) {
+                validationDiv.className = 'doc-number-validation';
+                return;
+            }
+
+            let isValid = false;
+            let message = '';
+
+            if (docType === 'cr') {
+                isValid = /^7\d{9}$/.test(docNumber);
+                message = isValid ? '✓ صيغة صحيحة' : '✗ الرقم الموحد يجب أن يبدأ بـ 7 ويتكون من 10 أرقام';
+            } else if (docType === 'freelance') {
+                isValid = /^FL-[A-Za-z0-9]{4,}$/i.test(docNumber);
+                message = isValid ? '✓ صيغة صحيحة' : '✗ الصيغة الصحيحة: FL-XXXXXXXX';
+            }
+
+            validationDiv.textContent = message;
+            validationDiv.className = `doc-number-validation ${isValid ? 'valid' : 'invalid'}`;
+            this.classList.toggle('error', !isValid);
+            this.classList.toggle('success', isValid);
+        });
+
+        docTypeSelect.addEventListener('change', function() {
+            docNumberInput.placeholder = this.value === 'cr' ? '7XXXXXXXXX' : 'FL-XXXXXXXX';
+            docNumberInput.dispatchEvent(new Event('input'));
+        });
+
+        // تقديم النموذج
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // إعادة تعيين الأخطاء
+            document.querySelectorAll('.error-message').forEach(el => {
+                el.textContent = '';
+                el.classList.remove('show');
+            });
+
+            const email = emailInput.value.trim();
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+            const businessName = document.getElementById('businessName').value.trim();
+            const docType = docTypeSelect.value;
+            const docNumber = docNumberInput.value.trim();
+
+            // التحقق من صحة البيانات
+            let hasError = false;
+
+            // التحقق من البريد الإلكتروني
+            if (!email || !/\S+@\S+\.\S+/.test(email)) {
+                document.getElementById('emailError').textContent = 'يرجى إدخال بريد إلكتروني صحيح';
+                document.getElementById('emailError').classList.add('show');
+                emailInput.classList.add('error');
+                hasError = true;
+            }
+
+            // التحقق من اسم المستخدم
+            if (!username || username.length < 3) {
+                document.getElementById('usernameError').textContent = 'يجب أن يكون اسم المستخدم 3 أحرف على الأقل';
+                document.getElementById('usernameError').classList.add('show');
+                usernameInput.classList.add('error');
+                hasError = true;
+            }
+
+            // التحقق من كلمة المرور
+            let passwordValid = true;
+            for (const req of Object.values(requirements)) {
+                if (!req.regex.test(password)) {
+                    passwordValid = false;
+                    break;
+                }
+            }
+
+            if (!passwordValid) {
+                document.getElementById('passwordError').textContent = 'كلمة المرور لا تفي بالمتطلبات';
+                document.getElementById('passwordError').classList.add('show');
+                passwordInput.classList.add('error');
+                hasError = true;
+            }
+
+            // التحقق من رقم الوثيقة
+            let docValid = false;
+            if (docType === 'cr') {
+                docValid = /^7\d{9}$/.test(docNumber);
+            } else if (docType === 'freelance') {
+                docValid = /^FL-[A-Za-z0-9]{4,}$/i.test(docNumber);
+            }
+
+            if (!docValid) {
+                document.getElementById('docValidation').textContent = 'رقم الوثيقة غير صحيح';
+                document.getElementById('docValidation').className = 'doc-number-validation invalid';
+                hasError = true;
+            }
+
+            if (hasError) return;
+
+            // تعطيل الزر وإظهار التحميل
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'جارٍ الإنشاء <span class="loading-spinner"></span>';
+
+            try {
+                // إنشاء الحساب في Supabase Auth
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            username: username,
+                            business_name: businessName,
+                            doc_type: docType,
+                            doc_number: docNumber
+                        },
+                        emailRedirectTo: window.location.origin + '/index.html'
+                    }
+                });
+
+                if (error) throw error;
+
+                // عرض رسالة النجاح
+                successMessage.classList.add('show');
+                form.style.display = 'none';
+
+                // حفظ البيانات مؤقتاً للاستخدام لاحقاً
+                if (data.user) {
+                    localStorage.setItem('temp_user_id', data.user.id);
+                    localStorage.setItem('temp_email', email);
+                    localStorage.setItem('temp_business_data', JSON.stringify({
+                        businessName,
+                        docType,
+                        docNumber,
+                        username
+                    }));
+                }
+
+            } catch (error) {
+                console.error('Signup error:', error);
+                
+                let errorMessage = 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.';
+                
+                if (error.message.includes('User already registered')) {
+                    errorMessage = 'هذا البريد الإلكتروني مسجل مسبقاً';
+                    emailInput.classList.add('error');
+                    document.getElementById('emailError').textContent = errorMessage;
+                    document.getElementById('emailError').classList.add('show');
+                } else if (error.message.includes('Weak password')) {
+                    errorMessage = 'كلمة المرور ضعيفة جداً';
+                    document.getElementById('passwordError').textContent = errorMessage;
+                    document.getElementById('passwordError').classList.add('show');
+                } else {
+                    document.getElementById('passwordError').textContent = errorMessage;
+                    document.getElementById('passwordError').classList.add('show');
+                }
+                
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'إنشاء الحساب';
+            }
+        });
+
+        // تحسين تجربة المستخدم
+        document.querySelectorAll('.form-input').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.classList.remove('error');
+            });
+        });
+    </script>
+</body>
+</html>
