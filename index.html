@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta id="appViewport" name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>تطبيقي الشامل</title>
+    <script>
+      ;(function () {
+        function applyViewport() {
+          var hash = window.location.hash || ""
+          var meta = document.getElementById("appViewport")
+          if (!meta) return
+          // صفحات الفاتورة (A4) والإيصال الحراري: اعرض بمقاس A4 الحقيقي
+          // (794 بكسل = 210mm) مع تمرير أفقي، بدلاً من ضغط الصفحة على الجوال.
+          if (hash.indexOf("#/i/") === 0 || hash.indexOf("#/r/") === 0) {
+            meta.content =
+              "width=794, initial-scale=1, maximum-scale=1, user-scalable=no"
+          } else {
+            meta.content = "width=device-width, initial-scale=1.0"
+          }
+        }
+        window.addEventListener("hashchange", applyViewport)
+        applyViewport()
+      })()
+    </script>
+    <script type="module" crossorigin src="./assets/index-D-5hAoy5.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Bg_d1O3U.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
