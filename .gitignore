@@ -1,1 +1,18 @@
-Nothing needs to be added to .gitignore since only a single HTML file (signup.html) was added, which is a source code file and should not be ignored.
+```
+# Dependencies
+node_modules/
+
+# Build artifacts
+web/dist/
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# System files
+.DS_Store
+
+# Logs
+*.log
+```
