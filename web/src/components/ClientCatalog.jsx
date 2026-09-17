@@ -315,7 +315,7 @@ export default function ClientCatalog({ businessId }) {
                   </div>
                   <div className="cc-card-actions">
                     <button className="cc-card-edit" onClick={() => openEditForm(it)}>✏️ تعديل</button>
-                    <button className="cc-card-delete" onClick={() => handleDelete(it.id)}">🗑️ حذف</button>
+                    <button className="cc-card-delete" onClick={() => handleDelete(it.id)}>🗑️ حذف</button>
                   </div>
                   <a href={`#/i/${it.id}`} className="cc-card-cta">تفاصيل الطلب</a>
                 </div>
