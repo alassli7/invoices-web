@@ -2,8 +2,8 @@ import { useState } from "react"
 import { loginBusiness, registerBusiness } from "../lib/storage.js"
 import { validateDoc } from "../lib/format.js"
 
-export default function Auth({ onAuth }) {
-  const [tab, setTab] = useState("login")
+export default function Auth({ onAuth, initialTab }) {
+  const [tab, setTab] = useState(initialTab || "login")
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [businessName, setBusinessName] = useState("")

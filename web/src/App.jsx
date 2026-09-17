@@ -24,9 +24,9 @@ function parseHash() {
 
   if (parts[0] === "i" && parts[1]) return { view: "invoice", id: parts[1] }
   if (parts[0] === "r" && parts[1]) return { view: "receipt", id: parts[1] }
-  if (parts[0] === "login") return { view: "login" }
+  if (parts[0] === "login") return { view: "auth", tab: "login" }
   if (parts[0] === "pricing") return { view: "pricing" }
-  if (parts[0] === "new") return { view: "form", id: null }
+  if (parts[0] === "new") return { view: "auth", tab: "register" }
   if (parts[0] === "edit" && parts[1]) return { view: "form", id: parts[1] }
   if (parts[0] === "catalog") return { view: "catalog" }
   if (parts[0] === "client-catalog" && parts[1]) {
@@ -216,19 +216,19 @@ export default function App() {
     )
   }
 
-  if (!sessionId && route.view === "dashboard") {
-    return (
-      <LandingPage
-        onGetStarted={() => go("/new")}
-        onLogin={() => go("/login")}
-        onPricing={() => go("/pricing")}
-      />
-    )
-  }
-
-  if (!sessionId) {
+  if (!sessionId && (route.view === "auth" || route.view === "dashboard")) {
+    if (route.view === "dashboard") {
+      return (
+        <LandingPage
+          onGetStarted={() => go("/new")}
+          onLogin={() => go("/login")}
+          onPricing={() => go("/pricing")}
+        />
+      )
+    }
     return (
       <Auth
+        initialTab={route.tab || "login"}
         onAuth={() => {
           setSessionId(getCurrentBusinessId())
           setRoute(parseHash())
