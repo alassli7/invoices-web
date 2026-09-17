@@ -46,3 +46,4 @@ coverage/
 # Misc
 *.md.bak
 *.backup
+web/dist/
