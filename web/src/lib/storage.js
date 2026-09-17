@@ -4,7 +4,7 @@ import {
   SUPABASE_PUBLISHABLE_KEY,
   isSupabaseEnabled
 } from "./supabaseConfig.js"
-import { defaultProfile, defaultCatalogItems, defaultCatalogByCategory } from "./format.js"
+import { defaultProfile, defaultCatalogItems, defaultCatalogByCategory, generateUUID, generateInvoiceHash, generateCryptographicStamp } from "./format.js"
 import { sha256 } from "js-sha256"
 
 // ---------- عميل Supabase ----------
@@ -365,7 +365,16 @@ export async function saveProfile(profile) {
 // ---------- الفواتير (مُرتبطة بالنشاط) ----------
 export async function saveInvoice(invoice) {
   const bid = await getEffectiveBizId()
-  const inv = { ...invoice, business_id: bid }
+  const uuid = invoice.uuid || generateUUID()
+  const hash = await generateInvoiceHash({ ...invoice, uuid })
+  const stamp = await generateCryptographicStamp(hash)
+  const inv = {
+    ...invoice,
+    business_id: bid,
+    uuid,
+    hash,
+    stamp
+  }
   if (supabase) {
     let { error } = await supabase.from("invoices").upsert(inv)
     if (error && error.code === "PGRST204") {

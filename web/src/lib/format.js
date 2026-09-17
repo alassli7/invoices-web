@@ -613,3 +613,225 @@ export function downloadInvoiceXML(invoice, profile) {
   a.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
+
+// ── ZATCA Phase 2 Features ──
+
+export function generateUUID() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === "x" ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+export async function generateInvoiceHash(data) {
+  const json = JSON.stringify(data, Object.keys(data).sort())
+  const encoder = new TextEncoder()
+  const dataBuffer = encoder.encode(json)
+  const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
+}
+
+export async function generateCryptographicStamp(hash) {
+  try {
+    const keyPair = await crypto.subtle.generateKey(
+      { name: "ECDSA", namedCurve: "P-256" },
+      true,
+      ["sign", "verify"]
+    )
+    const encoder = new TextEncoder()
+    const signature = await crypto.subtle.sign(
+      { name: "ECDSA", hash: { name: "SHA-256" } },
+      keyPair.privateKey,
+      encoder.encode(hash)
+    )
+    const sigArray = Array.from(new Uint8Array(signature))
+    return sigArray.map((b) => b.toString(16).padStart(2, "0")).join("")
+  } catch {
+    return null
+  }
+}
+
+export async function generateZATCAStamp(invoiceData, profile) {
+  const hash = await generateInvoiceHash({ ...invoiceData, taxNumber: profile.payMethods?.taxNumber })
+  const stamp = await generateCryptographicStamp(hash)
+  return { hash, stamp }
+}
+
+export function generateZATCAQRCodeData(invoice, profile) {
+  const vatRate = Number(getVatRate(profile)) || 0
+  const subtotal = Number(calcSubtotal(invoice.items || [])) || 0
+  const vat = Number(vatAmount(subtotal, profile)) || 0
+  const total = subtotal + vat
+  const taxNumber = profile.payMethods?.taxNumber || ""
+  const supplierName = profile.businessName || ""
+  const invoiceNo = invoice.number || invoice.id || ""
+  const issueDate = invoice.date || new Date().toISOString().slice(0, 10)
+  const time = invoice.time || "00:00"
+  const totalStr = total.toFixed(2)
+  const vatStr = vat.toFixed(2)
+  const taxStr = taxNumber
+  const invoiceDate = `${issueDate}T${time}:00Z`
+  const uuid = invoice.uuid || invoice.id || ""
+  const hash = invoice.hash || ""
+
+  return JSON.stringify({
+    uuid,
+    invoiceNo,
+    supplierName,
+    taxNumber: taxStr,
+    timeStamp: invoiceDate,
+    total: totalStr,
+    vat: vatStr,
+    discount: "0.00",
+    currency: "SAR"
+  })
+}
+
+export async function getZATCACompliantInvoiceData(invoice, profile) {
+  const uuid = invoice.uuid || generateUUID()
+  const subtotal = Number(calcSubtotal(invoice.items || [])) || 0
+  const vat = Number(vatAmount(subtotal, profile)) || 0
+  const total = subtotal + vat
+
+  const invoiceData = {
+    ...invoice,
+    uuid,
+    subtotal,
+    vat,
+    total,
+    invoiceTypeCode: "388",
+    profileID: "reporting:1.0",
+    documentCurrencyCode: "SAR",
+    vatRate: Number(getVatRate(profile)) || 0,
+    taxNumber: profile.payMethods?.taxNumber || "",
+    invoiceDate: invoice.date || new Date().toISOString().slice(0, 10),
+    issueTime: invoice.time || "00:00"
+  }
+
+  const hash = await generateInvoiceHash(invoiceData)
+  const stamp = await generateCryptographicStamp(hash)
+
+  return { ...invoiceData, hash, stamp, uuid }
+}
+
+export function generateZATCACompliantXML(invoice, profile) {
+  const invData = invoice._zatca || invoice
+  const invNo = escapeXml(invData.number || invData.id || "")
+  const uuid = escapeXml(invData.uuid || "")
+  const issueDate = escapeXml(invData.invoiceDate || invData.date || new Date().toISOString().slice(0, 10))
+  const issueTime = escapeXml(invData.issueTime || invData.time || "00:00")
+  const supplierName = escapeXml(profile.businessName || "")
+  const supplierDoc = escapeXml(profile.docNumber || "")
+  const supplierTax = escapeXml(profile.payMethods?.taxNumber || "")
+  const supplierAddress = escapeXml(profile.address || "")
+  const supplierPhone = escapeXml(profile.phone || "")
+  const supplierEmail = escapeXml(profile.email || "")
+  const customerName = escapeXml(invoice.clientName || "")
+  const customerAddress = escapeXml(invoice.clientAddress || "")
+  const customerTax = escapeXml(invoice.clientTaxNumber || "")
+  const customerPhone = escapeXml(invoice.clientPhone || "")
+  const customerEmail = escapeXml(invoice.clientEmail || "")
+  const subtotal = Number(invData.subtotal || calcSubtotal(invoice.items || [])) || 0
+  const vat = Number(invData.vat || vatAmount(subtotal, profile)) || 0
+  const total = Number(invData.total || subtotal + vat) || 0
+  const vatRate = Number(invData.vatRate || getVatRate(profile)) || 0
+  const hash = escapeXml(invData.hash || "")
+  const stamp = escapeXml(invData.stamp || "")
+
+  const lines = (invoice.items || []).map((it, idx) => {
+    const lineTotal = Number(itemTotal(it)) || 0
+    return `    <cac:InvoiceLine>
+      <cbc:ID>${idx + 1}</cbc:ID>
+      <cbc:UUID>${escapeXml(it.id || generateUUID())}</cbc:UUID>
+      <cbc:InvoicedQuantity unitCode="PCE">${Number(it.qty) || 0}</cbc:InvoicedQuantity>
+      <cbc:LineExtensionAmount currencyID="SAR">${lineTotal.toFixed(2)}</cbc:LineExtensionAmount>
+      <cac:Item><cbc:Name>${escapeXml(it.desc || "")}</cbc:Name></cac:Item>
+      <cac:Price><cbc:PriceAmount currencyID="SAR">${Number(it.price || 0).toFixed(2)}</cbc:PriceAmount></cac:Price>
+      <cac:TaxTotal>
+        <cbc:TaxAmount currencyID="SAR">${vat.toFixed(2)}</cbc:TaxAmount>
+        <cac:TaxSubtotal>
+          <cbc:TaxableAmount currencyID="SAR">${subtotal.toFixed(2)}</cbc:TaxableAmount>
+          <cbc:TaxAmount currencyID="SAR">${vat.toFixed(2)}</cbc:TaxAmount>
+          <cac:TaxCategory><cbc:ID>${vatRate > 0 ? "S" : "O"}</cbc:ID><cbc:Percent>${vatRate.toFixed(2)}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>
+        </cac:TaxSubtotal>
+      </cac:TaxTotal>
+    </cac:InvoiceLine>`
+  }).join("\n")
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+  <cbc:ProfileID>${escapeXml(invData.profileID || "reporting:1.0")}</cbc:ProfileID>
+  <cbc:ID>${invNo}</cbc:ID>
+  <cbc:UUID>${uuid}</cbc:UUID>
+  <cbc:IssueDate>${issueDate}</cbc:IssueDate>
+  <cbc:IssueTime>${issueTime}:00Z</cbc:IssueTime>
+  <cbc:InvoiceTypeCode name="0200000">388</cbc:InvoiceTypeCode>
+  <cbc:DocumentCurrencyCode>SAR</cbc:DocumentCurrencyCode>
+  <cbc:Note/>
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cac:PartyName><cbc:Name>${supplierName}</cbc:Name></cac:PartyName>
+      <cac:PostalAddress><cbc:StreetName>${supplierAddress}</cbc:StreetName></cac:PostalAddress>
+      <cac:PartyIdentification><cbc:ID schemeID="CRN">${supplierDoc}</cbc:ID></cac:PartyIdentification>
+      ${supplierTax ? `<cac:PartyTaxScheme><cbc:CompanyID>${supplierTax}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>` : ""}
+      <cac:Contact><cbc:Telephone>${supplierPhone}</cbc:Telephone><cbc:ElectronicMail>${supplierEmail}</cbc:ElectronicMail></cac:Contact>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cac:PartyName><cbc:Name>${customerName}</cbc:Name></cac:PartyName>
+      <cac:PostalAddress><cbc:StreetName>${customerAddress}</cbc:StreetName></cac:PostalAddress>
+      ${customerTax ? `<cac:PartyTaxScheme><cbc:CompanyID>${customerTax}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>` : `<cac:PartyTaxScheme><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>`}
+      <cac:Contact><cbc:Telephone>${customerPhone}</cbc:Telephone><cbc:ElectronicMail>${customerEmail}</cbc:ElectronicMail></cac:Contact>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:TaxTotal>
+    <cbc:TaxAmount currencyID="SAR">${vat.toFixed(2)}</cbc:TaxAmount>
+    <cac:TaxSubtotal>
+      <cbc:TaxableAmount currencyID="SAR">${subtotal.toFixed(2)}</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="SAR">${vat.toFixed(2)}</cbc:TaxAmount>
+      <cac:TaxCategory><cbc:ID>${vatRate > 0 ? "S" : "O"}</cbc:ID><cbc:Percent>${vatRate.toFixed(2)}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>
+    </cac:TaxSubtotal>
+  </cac:TaxTotal>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID="SAR">${subtotal.toFixed(2)}</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID="SAR">${subtotal.toFixed(2)}</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID="SAR">${total.toFixed(2)}</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID="SAR">${total.toFixed(2)}</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+  <cac:Signature>
+    <cbc:ID>${uuid}</cbc:ID>
+    <cac:SignatoryParty>
+      <cac:PartyIdentification><cbc:ID schemeID="CRN">${supplierDoc}</cbc:ID></cac:PartyIdentification>
+      <cac:PartyName><cbc:Name>${supplierName}</cbc:Name></cac:PartyName>
+    </cac:SignatoryParty>
+    <cac:DigitalSignatureAttachment>
+      <cac:ExternalReference>
+        <cbc:URI>#${hash}</cbc:URI>
+      </cac:ExternalReference>
+    </cac:DigitalSignatureAttachment>
+  </cac:Signature>
+${lines}
+</Invoice>`
+}
+
+export function downloadZATCACompliantXML(invoice, profile) {
+  const xml = generateZATCACompliantXML(invoice, profile)
+  const blob = new Blob([xml], { type: "application/xml;charset=utf-8" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `${invoice.number || invoice.id || "invoice"}_zatca.xml`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+export async function generateZATCAQRCode(invoice, profile) {
+  const data = generateZATCAQRCodeData(invoice, profile)
+  return data
+}

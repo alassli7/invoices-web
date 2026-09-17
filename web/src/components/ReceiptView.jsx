@@ -19,7 +19,10 @@ import {
   getBankLogo,
   getEffectiveBankLogo,
   BANK_PLACEHOLDER,
-  itemQtyLabel
+  itemQtyLabel,
+  generateZATCAQRCode,
+  generateUUID,
+  downloadZATCACompliantXML
 } from "../lib/format.js"
 export default function ReceiptView({ invoice, profile, standalone }) {
   const canvasRef = useRef(null)
@@ -27,6 +30,10 @@ export default function ReceiptView({ invoice, profile, standalone }) {
   const shareUrl = buildShareUrl(invoice.id, invoice, profile)
   const subtotal = calcSubtotal(invoice.items)
   const effectiveBankLogo = getEffectiveBankLogo(profile) || getBankLogo(profile.bankId) || getBankLogo(profile.payMethods?.bankId) || ""
+  const zatcaQRData = generateZATCAQRCode(invoice, profile)
+  const uuid = invoice.uuid || generateUUID()
+  const hash = invoice.hash || ""
+  const stamp = invoice.stamp || ""
 
   const copyLink = async () => {
     try {
@@ -265,6 +272,10 @@ export default function ReceiptView({ invoice, profile, standalone }) {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
             طباعة إيبسون
           </button>
+          <button className="btn btn-gold btn-icon" onClick={() => downloadZATCACompliantXML(invoice, profile)} title="تحميل فاتورة إلكترونية ZATCA">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            XML
+          </button>
         </div>
 
         <div className="rv-receipt" id="receipt">
@@ -443,7 +454,12 @@ export default function ReceiptView({ invoice, profile, standalone }) {
           <div className="r-codes">
             <canvas ref={canvasRef}></canvas>
             <div className="r-qr">
-              <QRCodeCanvas value={shareUrl} size={70} />
+              <QRCodeCanvas value={zatcaQRData} size={70} />
+            </div>
+            <div style={{ direction: "ltr", textAlign: "center", fontSize: "0.6rem", color: "#000", marginTop: "4px" }}>
+              <div>UUID: <b>{uuid}</b></div>
+              <div>Hash: <b style={{ fontSize: "0.55rem" }}>{hash ? hash.slice(0, 16) + "..." : "-"}</b></div>
+              <div>Stamp: <b style={{ fontSize: "0.55rem" }}>{stamp ? stamp.slice(0, 16) + "..." : "-"}</b></div>
             </div>
           </div>
 
