@@ -1,55 +1,61 @@
 {
-  "hash": "5b2af123",
+  "hash": "032dc087",
   "configHash": "0fed8e66",
-  "lockfileHash": "f35d45eb",
-  "browserHash": "317877fd",
+  "lockfileHash": "10f4856b",
+  "browserHash": "7e6f1d57",
   "optimized": {
     "react": {
       "src": "../../react/index.js",
       "file": "react.js",
-      "fileHash": "d179bf43",
+      "fileHash": "98d1bfde",
       "needsInterop": true
     },
     "react-dom": {
       "src": "../../react-dom/index.js",
       "file": "react-dom.js",
-      "fileHash": "2f224bc2",
+      "fileHash": "b2d80c71",
       "needsInterop": true
     },
     "react/jsx-dev-runtime": {
       "src": "../../react/jsx-dev-runtime.js",
       "file": "react_jsx-dev-runtime.js",
-      "fileHash": "a1676b90",
+      "fileHash": "6ecfed01",
       "needsInterop": true
     },
     "react/jsx-runtime": {
       "src": "../../react/jsx-runtime.js",
       "file": "react_jsx-runtime.js",
-      "fileHash": "bd342c55",
+      "fileHash": "5d30f55d",
       "needsInterop": true
     },
     "@supabase/supabase-js": {
       "src": "../../@supabase/supabase-js/dist/index.mjs",
       "file": "@supabase_supabase-js.js",
-      "fileHash": "436dfa0a",
+      "fileHash": "1f598ec1",
+      "needsInterop": false
+    },
+    "js-sha256": {
+      "src": "../../js-sha256/src/index.mjs",
+      "file": "js-sha256.js",
+      "fileHash": "6c29bfe3",
       "needsInterop": false
     },
     "jsbarcode": {
       "src": "../../jsbarcode/bin/JsBarcode.js",
       "file": "jsbarcode.js",
-      "fileHash": "61f3ee10",
+      "fileHash": "99fb5a76",
       "needsInterop": true
     },
     "qrcode.react": {
       "src": "../../qrcode.react/lib/esm/index.js",
       "file": "qrcode__react.js",
-      "fileHash": "8b02e62c",
+      "fileHash": "719d59a8",
       "needsInterop": false
     },
     "react-dom/client": {
       "src": "../../react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "7ffa0db7",
+      "fileHash": "d9595f3c",
       "needsInterop": true
     }
   },
