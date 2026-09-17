@@ -69,10 +69,10 @@ export default function App() {
   const [profile, setProfile] = useState(null)
   const [menuOpen, setMenuOpen] = useState(false)
 
-  const go = useCallback((path) => {
+const go = useCallback((path) => {
     setMenuOpen(false)
-    window.location.hash = path
-  }, [])
+    window.location.hash = path.startsWith("#") ? path : "#" + path
+}, [])
 
   const refresh = useCallback(() => {
     setTick((value) => value + 1)
