@@ -26,7 +26,8 @@ function parseHash() {
   if (parts[0] === "r" && parts[1]) return { view: "receipt", id: parts[1] }
   if (parts[0] === "login") return { view: "auth", tab: "login" }
   if (parts[0] === "pricing") return { view: "pricing" }
-  if (parts[0] === "new") return { view: "auth", tab: "register" }
+  if (parts[0] === "new" && parts[1] === "register") return { view: "auth", tab: "register" }
+  if (parts[0] === "new") return { view: "pricing" }
   if (parts[0] === "edit" && parts[1]) return { view: "form", id: parts[1] }
   if (parts[0] === "catalog") return { view: "catalog" }
   if (parts[0] === "client-catalog" && parts[1]) {
@@ -210,7 +211,7 @@ export default function App() {
     return (
       <PricingPage
         onBack={() => go("/")}
-        onGetStarted={() => go("/new")}
+        onGetStarted={() => go("/new/register")}
         onLogin={() => go("/login")}
       />
     )
