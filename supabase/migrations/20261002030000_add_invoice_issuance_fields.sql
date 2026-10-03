@@ -1,0 +1,21 @@
+-- Add fields used by the invoice issuer to databases created from the legacy schema.
+ALTER TABLE public.invoices
+  ADD COLUMN IF NOT EXISTS "clientAddress" text,
+  ADD COLUMN IF NOT EXISTS "clientTaxNumber" text,
+  ADD COLUMN IF NOT EXISTS uuid text,
+  ADD COLUMN IF NOT EXISTS hash text,
+  ADD COLUMN IF NOT EXISTS stamp text,
+  ADD COLUMN IF NOT EXISTS "isTaxInvoice" boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS "taxInvoiceId" text,
+  ADD COLUMN IF NOT EXISTS "taxInvoiceNumber" text,
+  ADD COLUMN IF NOT EXISTS "vatRate" numeric,
+  ADD COLUMN IF NOT EXISTS "selectiveTaxRate" numeric,
+  ADD COLUMN IF NOT EXISTS "selectiveTaxAmount" numeric,
+  ADD COLUMN IF NOT EXISTS total numeric,
+  ADD COLUMN IF NOT EXISTS locked boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS editable boolean,
+  ADD COLUMN IF NOT EXISTS deletable boolean,
+  ADD COLUMN IF NOT EXISTS hideable boolean,
+  ADD COLUMN IF NOT EXISTS "retentionExpiry" text,
+  ADD COLUMN IF NOT EXISTS "retentionLocked" boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS "auditTrail" jsonb NOT NULL DEFAULT '[]'::jsonb;
